@@ -1,0 +1,64 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# --- Node / frontend build ---
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+
+# --- Environment / secrets ---
+.env
+.env.*.local
+*.local
+
+# --- Logs ---
+logs/
+*.log
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Runtime uploads (user-ingested documents, not source) ---
+data/legal/*
+!data/legal/.gitkeep
+data/app_docs/*
+!data/app_docs/.gitkeep
+
+# --- Evaluation datasets: large, fetched/generated caches, not source.
+# casehold/cuad/locomoplus_locomo10/locomoplus_plus are regenerable via
+# `python backend/evaluation/download_datasets.py`; contractnli/timeqa have
+# no automated downloader (see benchmarks.py's _load_contractnli/_load_timeqa
+# docstrings for how to re-fetch them by hand). locomoplus_sample.json is a
+# small checked-in fallback fixture, kept tracked on purpose.
+data/eval/*.json
+data/eval/*.jsonl
+!data/eval/locomoplus_sample.json
+
+# --- Local databases / dumps ---
+*.sqlite3
+*.db
+*.dump
+
+# --- Generated reports ---
+Legal_RAG_System_Documentation.pdf
+
+# --- Alembic autogenerate scratch (not the versioned migrations themselves) ---
+alembic/*.sql

@@ -1,0 +1,134 @@
+[
+  {
+    "case_type": "non_compete_enforceability",
+    "query_example": "Is the non-compete clause enforceable in this jurisdiction?",
+    "relevant_clauses": ["non-compete", "geographic scope", "duration", "restraint of trade"],
+    "resolution_template": "Check jurisdiction + duration reasonableness + geographic scope + consideration"
+  },
+  {
+    "case_type": "liquidated_damages",
+    "query_example": "Are the liquidated damages provisions enforceable?",
+    "relevant_clauses": ["liquidated damages", "penalty clause", "breach", "pre-estimate of loss"],
+    "resolution_template": "Determine if amount is genuine pre-estimate of loss vs penalty; check Cavendish Square test"
+  },
+  {
+    "case_type": "force_majeure",
+    "query_example": "Does the force majeure clause apply to this situation?",
+    "relevant_clauses": ["force majeure", "act of god", "supervening event", "frustration", "beyond reasonable control"],
+    "resolution_template": "Identify triggering event, foreseeability, causation link, notice obligation"
+  },
+  {
+    "case_type": "notice_period",
+    "query_example": "What notice is required to terminate this agreement?",
+    "relevant_clauses": ["notice period", "termination", "written notice", "days of", "effective date"],
+    "resolution_template": "Identify notice length, method of service, when notice starts running"
+  },
+  {
+    "case_type": "intellectual_property_assignment",
+    "query_example": "Who owns the intellectual property created under this contract?",
+    "relevant_clauses": ["intellectual property", "assignment", "work for hire", "moral rights", "ownership"],
+    "resolution_template": "Check assignment clause scope, timing (pre/post contract), carve-outs for pre-existing IP"
+  },
+  {
+    "case_type": "indemnification_scope",
+    "query_example": "What does the indemnification clause cover?",
+    "relevant_clauses": ["indemnify", "hold harmless", "defend", "third party claims", "losses"],
+    "resolution_template": "Scope of indemnity (direct vs third-party), caps, exclusions (negligence, wilful misconduct)"
+  },
+  {
+    "case_type": "limitation_of_liability",
+    "query_example": "What is the cap on liability under this contract?",
+    "relevant_clauses": ["limitation of liability", "aggregate cap", "consequential loss", "indirect damages", "exclude"],
+    "resolution_template": "Identify cap amount/formula, excluded loss types, carve-outs (fraud, death, IP)"
+  },
+  {
+    "case_type": "governing_law_jurisdiction",
+    "query_example": "Which law governs this agreement and where must disputes be resolved?",
+    "relevant_clauses": ["governing law", "jurisdiction", "dispute resolution", "arbitration", "courts of"],
+    "resolution_template": "Note chosen law, exclusive vs non-exclusive jurisdiction, arbitration seat if applicable"
+  },
+  {
+    "case_type": "confidentiality_duration",
+    "query_example": "How long does the confidentiality obligation last?",
+    "relevant_clauses": ["confidentiality", "non-disclosure", "NDA", "perpetual", "survives termination"],
+    "resolution_template": "Duration post-termination, carve-outs (public domain, compelled disclosure), standard of care"
+  },
+  {
+    "case_type": "payment_terms",
+    "query_example": "When must payment be made and what are the consequences of late payment?",
+    "relevant_clauses": ["payment", "invoice", "30 days", "interest", "late payment", "net"],
+    "resolution_template": "Payment trigger, due date, interest rate on late payment, set-off rights"
+  },
+  {
+    "case_type": "warranty_disclaimer",
+    "query_example": "Are warranties excluded or limited under this agreement?",
+    "relevant_clauses": ["warranty", "as is", "merchantability", "fitness for purpose", "disclaimer"],
+    "resolution_template": "Implied warranty exclusion validity by jurisdiction, express warranties, remedy on breach"
+  },
+  {
+    "case_type": "termination_for_cause",
+    "query_example": "What constitutes a material breach allowing termination?",
+    "relevant_clauses": ["material breach", "termination for cause", "cure period", "notice of breach", "remediation"],
+    "resolution_template": "Define material breach threshold, cure notice length, termination timing, survival clauses"
+  },
+  {
+    "case_type": "data_protection_obligations",
+    "query_example": "What data protection obligations apply under this agreement?",
+    "relevant_clauses": ["data protection", "GDPR", "personal data", "data processor", "data controller", "DPA"],
+    "resolution_template": "Identify controller/processor roles, lawful basis, data subject rights, breach notification"
+  },
+  {
+    "case_type": "variation_clause",
+    "query_example": "Can the contract be amended verbally or must changes be in writing?",
+    "relevant_clauses": ["variation", "amendment", "entire agreement", "written", "no oral modification"],
+    "resolution_template": "Check no-oral-modification clause enforceability (Rock Advertising v MWB), formality requirements"
+  },
+  {
+    "case_type": "assignment_of_contract",
+    "query_example": "Can either party assign their rights or obligations?",
+    "relevant_clauses": ["assignment", "novation", "sub-contract", "consent", "change of control"],
+    "resolution_template": "Assignment of rights vs obligations, consent requirement, change of control trigger"
+  },
+  {
+    "case_type": "statute_of_limitations",
+    "query_example": "Is this claim time-barred under the applicable limitation period?",
+    "relevant_clauses": ["limitation period", "statute of limitations", "time-bar", "laches", "accrual"],
+    "resolution_template": "Identify cause of action, accrual date, applicable limitation period, any contractual shortening"
+  },
+  {
+    "case_type": "employment_termination_wrongful",
+    "query_example": "Was the employee wrongfully dismissed?",
+    "relevant_clauses": ["wrongful dismissal", "notice", "summary dismissal", "gross misconduct", "PILON"],
+    "resolution_template": "Check contractual notice given vs owed, grounds for summary dismissal, statutory minimums"
+  },
+  {
+    "case_type": "unfair_contract_terms",
+    "query_example": "Is this clause unfair or unenforceable under consumer protection law?",
+    "relevant_clauses": ["unfair terms", "UCTA", "CRA", "reasonableness test", "consumer", "significant imbalance"],
+    "resolution_template": "Identify B2C vs B2B, apply UCTA reasonableness or CRA fairness test, core terms exemption"
+  },
+  {
+    "case_type": "regulatory_compliance_obligation",
+    "query_example": "What regulatory compliance obligations does this contract impose?",
+    "relevant_clauses": ["compliance", "applicable law", "regulatory", "licence", "permit", "authorisation"],
+    "resolution_template": "Identify sector regulations, compliance party, change in law provisions, cost allocation"
+  },
+  {
+    "case_type": "dispute_resolution_escalation",
+    "query_example": "What steps must be taken before commencing litigation or arbitration?",
+    "relevant_clauses": ["dispute resolution", "escalation", "mediation", "negotiation", "cooling-off", "ADR"],
+    "resolution_template": "Map pre-litigation steps (negotiation → mediation → arbitration/court), time limits at each stage"
+  },
+  {
+    "case_type": "software_licence_scope",
+    "query_example": "What is the permitted scope of use under this software licence?",
+    "relevant_clauses": ["licence", "permitted use", "users", "seats", "subscription", "SaaS", "field of use"],
+    "resolution_template": "Identify licence type (perpetual/subscription), scope (users/modules/geography), audit rights"
+  },
+  {
+    "case_type": "earn_out_calculation",
+    "query_example": "How is the earn-out payment calculated and when is it due?",
+    "relevant_clauses": ["earn-out", "milestone", "EBITDA", "revenue target", "earnout period", "adjustment"],
+    "resolution_template": "Identify metric, measurement period, cap/floor, accounting standards, dispute mechanism"
+  }
+]
