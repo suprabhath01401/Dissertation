@@ -152,6 +152,8 @@ Results are saved to Postgres (`evaluation_results` — per-sample rows, `evalua
 
 If cluster dispatch fails or times out, `mixtral_cluster` falls back to local generation automatically.
 
+Github link: https://github.com/suprabhath01401/Dissertation
+
 ## Troubleshooting
 
 - **`/health` shows Ollama down**: confirm `ollama serve` is running and the models above are pulled (`ollama list`).
