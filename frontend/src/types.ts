@@ -4,10 +4,10 @@ export interface Source {
   page: number | string;
   chunk_index: number;
   sac_summary?: string;
-  // The retrieved chunk's raw text. Sent by the backend's "source" SSE event
+  // The retrieved chunk's raw text, sent by the backend's "source" SSE event
   // and persisted on stored messages (see backend/retrieval/hybrid_retriever.py's
-  // retrieve() and backend/main.py's chat stream), but historically left off
-  // this type — added so the UI can show it in an expanded citation view.
+  // retrieve() and backend/main.py's chat stream). Used for the expanded
+  // citation view.
   text?: string;
   score: number;
 }

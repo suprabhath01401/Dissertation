@@ -34,7 +34,6 @@ export function MessageBubble({ message }: Props) {
               ))}
             </div>
 
-            {/* Rendered separately from the answer text, per spec. */}
             {message.temporal_facts && <DateCard facts={message.temporal_facts} />}
           </>
         )}

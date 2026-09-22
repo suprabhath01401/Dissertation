@@ -34,14 +34,12 @@ const CONFIG_LABELS: Record<string, string> = {
 };
 
 // ── Metric metadata ──────────────────────────────────────────────────────────
-// The current 13 metrics, across the 6 finalised benchmarks (locomo =
-// factual memory, categories 1-5; locomoplus = cognitive memory, category
-// 6/"cognitive" — two halves of what an earlier design merged into one
-// "locomoplus" dataset, now split into separate benchmark names but both
-// still judged by the same category-prompted judge_score function).
-// macro_f1 and AUPR/precision_at_recall are dataset-level aggregates (one
-// row per (dataset, config) run, not per sample) — they still show up as
-// ordinary rows here, just far less frequently than the per-sample metrics.
+// The 13 metrics across the 6 benchmarks (locomo = factual memory,
+// locomoplus = cognitive memory, both judged by the same category-prompted
+// judge_score function). macro_f1 and AUPR/precision_at_recall are
+// dataset-level aggregates (one row per (dataset, config) run, not per
+// sample) — they still show up as ordinary rows here, just far less
+// frequently than the per-sample metrics.
 
 const METRIC_META: Record<string, { label: string; benchmarks: string }> = {
   rouge_l:                   { label: "ROUGE-L",               benchmarks: "contractnli · timeqa · locomo · locomoplus · casehold · cuad (supplementary)" },
@@ -110,10 +108,9 @@ export function EvalDashboard() {
     fetchEvalRuns().then(setRuns).catch(console.error);
   }, []);
 
-  // Single always-on poll every 5 s — directly reflects server truth
-  // (spec 7d: "the frontend EvalDashboard polls /status every 5 seconds
-  // unconditionally"). Detects running→idle transition to refresh results
-  // and show a notice.
+  // Single always-on poll every 5 s, unconditional, so the status bar
+  // directly reflects server truth. Detects a running→idle transition to
+  // refresh results and show a notice.
   useEffect(() => {
     refresh();
     fetchEvalStatus()

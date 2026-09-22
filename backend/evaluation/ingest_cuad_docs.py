@@ -1,13 +1,8 @@
 """Ingest CUAD's own contracts into a dedicated eval_docs Qdrant collection,
-so the cuad eval config can do open-book retrieval instead of being handed
-the answer-bearing contract text directly.
-
-NOT part of the standard CUAD flow: the finalised benchmark spec scores CUAD
-closed-book (the contract excerpt is given directly with the question, same
-protocol as ContractNLI/TimeQA — see backend/evaluation/benchmarks.py's
-_score_cuad), so this script and the eval_docs collection it builds are
-unused by default. Kept for anyone who wants to re-enable the open-book
-variant; running it has no effect on a standard benchmark run.
+so an open-book CUAD variant can retrieve contracts instead of being handed
+the answer-bearing contract text directly. The standard CUAD benchmark
+(backend/evaluation/benchmarks.py's _score_cuad) scores closed-book instead,
+so this script and the eval_docs collection are unused by default.
 
 CUAD's local cache (data/eval/cuad.json) has one row per (contract, question)
 pair — many questions share the same contract. This script dedupes down to
@@ -74,7 +69,7 @@ def load_unique_cuad_contracts() -> list[str]:
     """
     path = DATA_DIR / "cuad.json"
     if not path.exists():
-        raise SystemExit(f"{path} not found — run download_datasets.py --datasets cuad first")
+        raise SystemExit(f"{path} not found")
     samples = json.loads(path.read_text())
     contexts = {s["context"] for s in samples if s.get("context")}
     return sorted(contexts)

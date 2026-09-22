@@ -13,11 +13,10 @@ function formatDate(iso: string | null | undefined): string | null {
 }
 
 /**
- * Dedicated date/temporal card — rendered separately from the answer text
- * (per spec: "shown to the user in a dedicated date card in the UI, separate
- * from the text answer"). Summarises the parallel_circuit (earliest/latest +
- * conflicts) and series_circuit (computed deadline) outputs from the
- * backend's temporal reasoning sub-system, plus the raw explicit dates found.
+ * Dedicated date/temporal card, rendered separately from the answer text.
+ * Summarises the parallel_circuit (earliest/latest + conflicts) and
+ * series_circuit (computed deadline) outputs from the backend's temporal
+ * reasoning sub-system, plus the raw explicit dates found.
  */
 export function DateCard({ facts }: Props) {
   const parallel = facts?.parallel;

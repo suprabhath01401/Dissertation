@@ -785,9 +785,9 @@ def ch_evaluation(doc: Doc):
         "The evaluation framework exists to provide empirical evidence that the engineering choices "
         "in this system (hybrid retrieval, SAC chunking, adaptive routing, expert prompting, session "
         "memory) produce measurably better answers than simpler baselines. It compares five system "
-        "configurations across thirteen metrics on five established, English-language benchmark "
-        "datasets from the legal NLP literature — one dataset per research question plus one "
-        "generalisation check."
+        "configurations across thirteen metrics on six established, English-language benchmark "
+        "datasets from the legal NLP literature — one dataset per research question (RQ2 is covered "
+        "by two: a factual-memory and a cognitive-memory benchmark) plus one generalisation check."
     )
 
     doc.h2("9.2 System Configurations")
@@ -807,7 +807,7 @@ def ch_evaluation(doc: Doc):
     doc.table(
         ["Metric", "Range", "Method", "What it measures"],
         [
-            ["rouge_l", "0-1", "Pure Python LCS", "Lexical overlap vs. reference; supplementary on all 5 datasets"],
+            ["rouge_l", "0-1", "Pure Python LCS", "Lexical overlap vs. reference; supplementary on all 6 datasets"],
             ["accuracy", "0-1", "Exact label match", "3-way NLI label (contractnli), holding letter (casehold)"],
             ["macro_f1", "0-1", "F1 averaged per class, dataset-level", "Holding classification, primary metric (casehold)"],
             ["micro_f1", "0-1", "tp/fp/fn over span sets", "Evidence-span identification (contractnli)"],
@@ -815,11 +815,11 @@ def ch_evaluation(doc: Doc):
             ["token_f1", "0-1", "Token overlap F1", "Partial-credit span match (cuad, timeqa)"],
             ["AUPR", "0-1", "Area under P-R curve, dataset-level", "Primary metric, confidence-ranked predictions (cuad)"],
             ["precision_at_recall", "0-1", "Precision at r=0.8/0.9, dataset-level", "cuad (r=0.8, r=0.9), contractnli (r=0.8)"],
-            ["judge_score", "0/0.5/1", "LLM-as-judge, 6 category prompts", "Primary metric for conversational QA (locomoplus)"],
-            ["constraint_consistency", "0-1", "LLM judge yes/no", "Does the answer still respect earlier constraints? (locomoplus)"],
-            ["temporal_consistency", "0-1", "Exact ISO date match fraction", "Date-arithmetic accuracy, primary (timeqa)"],
+            ["judge_score", "0/0.5/1", "LLM-as-judge, category prompts", "Primary metric for factual memory (locomo) and cognitive memory (locomoplus)"],
+            ["constraint_consistency", "0-1", "LLM judge yes/no", "Does the answer still respect the earlier cue? (locomoplus)"],
+            ["temporal_consistency", "0-1", "Exact ISO date match fraction", "Date-arithmetic accuracy (timeqa)"],
             ["perturbation_consistency", "0-1", "Answer changes under shifted year", "Robustness check, primary (timeqa)"],
-            ["retrieval_recall", "0-1", "Gold-span token overlap", "Did retrieval surface the needed passage? (cuad, contractnli)"],
+            ["retrieval_recall", "0-1", "Gold-span token overlap", "Did retrieval surface the needed passage? (contractnli)"],
         ],
         [38, 14, 55, 63],
     )
@@ -833,13 +833,14 @@ def ch_evaluation(doc: Doc):
     doc.table(
         ["Dataset", "Type", "Source", "Size", "Research question"],
         [
-            ["contractnli", "NDA NLI + evidence spans", "Stanford NLP Group", "2,091 pairs (test)", "RQ1"],
-            ["timeqa", "Temporal reading comprehension", "wenhuchen/Time-Sensitive-QA (GitHub)", "1,978 (989 easy + 989 hard)", "RQ3"],
-            ["locomoplus", "Long-context conversational QA, 6 categories", "xjtuleeyf/Locomo-Plus (GitHub)", "2,387", "RQ2"],
-            ["casehold", "Multiple-choice holding selection", "coastalcph/lex_glue[case_hold]", "2,000", "Generalisation"],
-            ["cuad", "Contract clause extraction", "chenghao/cuad_qa (HuggingFace)", "500 answerable", "RQ1"],
+            ["contractnli", "NDA NLI + evidence spans", "Stanford NLP Group", "1,000 of 2,091 pairs", "RQ1"],
+            ["timeqa", "Temporal reading comprehension", "wenhuchen/Time-Sensitive-QA (GitHub)", "2,000 (1,000 easy + 1,000 hard)", "RQ3"],
+            ["locomo", "Long-context conversational QA, 5 categories", "xjtuleeyf/Locomo-Plus (GitHub)", "1,000 of 1,986", "RQ2 (factual)"],
+            ["locomoplus", "Cue-trigger conversational recall", "xjtuleeyf/Locomo-Plus (GitHub)", "401", "RQ2 (cognitive)"],
+            ["casehold", "Multiple-choice holding selection", "coastalcph/lex_glue[case_hold]", "1,000", "Generalisation"],
+            ["cuad", "Contract clause extraction", "chenghao/cuad_qa (HuggingFace)", "1,000 answerable", "RQ1"],
         ],
-        [24, 40, 46, 32, 27],
+        [22, 38, 42, 30, 26],
     )
     doc.body(
         "An earlier suite (legalbench-rag, lexrag, chronoqa, lexglue) has been removed from the "
@@ -995,15 +996,16 @@ def ch_datasets(doc: Doc):
 
     doc.h2("11.4 Evaluation Datasets")
     doc.table(
-        ["Dataset", "Size", "Source", "Acquisition"],
+        ["Dataset", "Size", "Source"],
         [
-            ["contractnli", "2,091 pairs", "Stanford NLP Group", "data/eval/contractnli.json (placed manually)"],
-            ["timeqa", "1,978 (989 easy + 989 hard)", "wenhuchen/Time-Sensitive-QA (GitHub)", "data/eval/timeqa.json (placed manually)"],
-            ["locomoplus", "2,387", "xjtuleeyf/Locomo-Plus (GitHub)", "download_datasets.py (direct download)"],
-            ["casehold", "2,000", "coastalcph/lex_glue[case_hold]", "download_datasets.py (HuggingFace)"],
-            ["cuad", "500 answerable", "chenghao/cuad_qa", "download_datasets.py (HuggingFace)"],
+            ["contractnli", "1,000 of 2,091 pairs (fixed sample)", "Stanford NLP Group"],
+            ["timeqa", "2,000 (1,000 easy + 1,000 hard)", "wenhuchen/Time-Sensitive-QA (GitHub)"],
+            ["locomo", "1,000 of 1,986 questions (fixed sample)", "xjtuleeyf/Locomo-Plus (GitHub)"],
+            ["locomoplus", "401 cue-trigger instances", "xjtuleeyf/Locomo-Plus (GitHub)"],
+            ["casehold", "1,000", "coastalcph/lex_glue[case_hold]"],
+            ["cuad", "1,000 answerable", "chenghao/cuad_qa"],
         ],
-        [24, 30, 43, 53],
+        [24, 45, 55],
     )
 
     doc.h2("11.5 Recommended Future Documents")

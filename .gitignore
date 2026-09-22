@@ -42,12 +42,10 @@ data/legal/*
 data/app_docs/*
 !data/app_docs/.gitkeep
 
-# --- Evaluation datasets: large, fetched/generated caches, not source.
-# casehold/cuad/locomoplus_locomo10/locomoplus_plus are regenerable via
-# `python backend/evaluation/download_datasets.py`; contractnli/timeqa have
-# no automated downloader (see benchmarks.py's _load_contractnli/_load_timeqa
-# docstrings for how to re-fetch them by hand). locomoplus_sample.json is a
-# small checked-in fallback fixture, kept tracked on purpose.
+# --- Evaluation datasets: large, fetched caches, not source. None of them
+# have an automated downloader (see benchmarks.py's per-dataset loader
+# docstrings for how to re-fetch each one by hand). locomoplus_sample.json
+# is a small checked-in fallback fixture, kept tracked on purpose.
 data/eval/*.json
 data/eval/*.jsonl
 !data/eval/locomoplus_sample.json

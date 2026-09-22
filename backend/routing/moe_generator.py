@@ -141,17 +141,15 @@ async def generate_response(
     """
     # Mixtral is used whenever the user explicitly toggled it on, OR the
     # router itself decided this query needs the cluster — both cases take
-    # the identical dispatch_to_cluster_sync() code path so an auto-routed
-    # "cluster" decision actually reaches Mixtral instead of silently
-    # falling through to the local model.
+    # the identical dispatch_to_cluster_sync() code path.
     route_to_cluster = use_mixtral or decision.path == "cluster"
 
     # 1. Routing decision — yielded first, before any extraction/prompt/
     #    generation work begins.
     if use_mixtral:
-        # Still reported as "cluster", not a distinct 4th value — the routing
-        # badge is a 3-way local/cluster/temporal enum per spec regardless of
-        # whether the cluster was chosen by explicit toggle or by the router.
+        # Reported as "cluster" — the routing badge is a 3-way
+        # local/cluster/temporal enum regardless of whether the cluster was
+        # chosen by explicit toggle or by the router.
         yield ("route", "cluster", {"expert_role": decision.expert_role, "confidence": 1.0})
     else:
         yield ("route", decision.path, {"expert_role": decision.expert_role, "confidence": decision.confidence})

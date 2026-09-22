@@ -1,8 +1,4 @@
-"""Benchmark runner — compares RAG configurations across the 6 benchmark
-datasets of the finalised evaluation suite. LexRAG/ChronoQA/LegalBench-RAG/
-LexGLUE (an earlier, superseded 7-dataset suite) have been removed from the
-codebase entirely, not merely excluded from the standard run — there is no
-loader/scorer code for them left here.
+"""Benchmark runner — compares RAG configurations across 6 benchmark datasets.
 
 Datasets (ALL_DATASETS)
 ------------------------
@@ -63,30 +59,25 @@ full_system      Hybrid retrieval + routing + full expert system prompt (current
 mixtral_cluster  full_system, generation dispatched to Mixtral 8x7B on the Warwick GPU cluster
                  (via HuggingFace transformers, since Mixtral isn't an Ollama-gated pull).
 
-llama_cluster is NOT part of CONFIGS (undocumented 6th config, not in the spec's 5) but its
-generation-dispatch code and CLUSTER_SBATCH entry are deliberately left in place below. It
-remains directly callable (e.g. `_generate("llama_cluster", ...)`) even though it will never
-be reached via the standard CONFIGS-driven run.
+llama_cluster runs the same full_system pipeline as mixtral_cluster but dispatches to
+llama3.1:8b on the Warwick cluster instead of Mixtral (see CLUSTER_SBATCH). It's callable
+directly via _generate("llama_cluster", ...) but isn't part of CONFIGS, so a standard
+run across CONFIGS never reaches it.
 
 Data acquisition
 -----------------
-There is no in-app or CLI "download all" feature — data/eval/*.json is
-populated once, manually, per dataset:
-  contractnli.json    — Stanford NLP Group (stanfordnlp.github.io/contract-nli/),
-                        test.json transformed into flat (document, hypothesis) pairs.
-  timeqa.json         — wenhuchen/Time-Sensitive-QA GitHub, dataset/test.easy.json +
-                        test.hard.json (the real test partition, ~3,000/split), with
-                        1,000 sampled per split (fixed seed) and transformed into
-                        {question, context, answer, split}.
+data/eval/*.json holds the cached sample sets these loaders read from:
+  contractnli.json  — Stanford NLP Group (stanfordnlp.github.io/contract-nli/),
+                      test.json flattened into (document, hypothesis) pairs.
+  timeqa.json       — wenhuchen/Time-Sensitive-QA (GitHub), dataset/test.easy.json +
+                      test.hard.json, 1,000 sampled per split (fixed seed) and
+                      flattened into {question, context, answer, split}.
   locomoplus_locomo10.json, locomoplus_plus.json
-                      — see backend/evaluation/download_datasets.py (download_direct);
-                        loaded as two separate benchmarks ("locomo"/"locomoplus" — see
-                        _load_locomo/_load_locomoplus), not merged into one.
-  casehold.json       — see backend/evaluation/download_datasets.py (download_casehold),
-                        truncated to the first 1,000 of its 2,000 cached samples.
-  cuad.json           — see backend/evaluation/download_datasets.py (download_cuad),
-                        re-fetched with limit=1,000 (up from the dataset's earlier 500).
-All are already present in data/eval/ in this repo.
+                    — xjtuleeyf/Locomo-Plus (GitHub); loaded as two separate
+                      benchmarks, "locomo" and "locomoplus" (see _load_locomo/
+                      _load_locomoplus).
+  casehold.json     — coastalcph/lex_glue[case_hold] (HuggingFace), 1,000 samples.
+  cuad.json         — chenghao/cuad_qa (HuggingFace), 1,000 answerable samples.
 
 Usage
 -----
@@ -132,9 +123,8 @@ from backend.routing.moe_generator import build_system_prompt
 from backend.routing.self_router import route
 from backend.memory.session_store import SessionContext
 
-# Spec's exactly-5 configs (SYSTEM_EXPLANATION.txt section 7a). llama_cluster is
-# deliberately NOT included — see module docstring above; its dispatch code
-# and CLUSTER_SBATCH entry remain defined and directly callable below.
+# The 5 configs a standard benchmark run compares (see module docstring above
+# for llama_cluster, which is not in this list but is still directly callable).
 CONFIGS = ["vanilla_rag", "long_ctx_only", "self_route_base", "full_system", "mixtral_cluster"]
 
 # eval config -> sbatch job used to run inference on the Warwick GPU cluster.
@@ -180,15 +170,6 @@ def _embed_query(text: str) -> list[float]:
 # Dataset loaders
 # ---------------------------------------------------------------------------
 
-def _load_local(filename: str) -> list[dict]:
-    """Read a JSON dataset file from DATA_DIR, returning [] if it hasn't been downloaded yet."""
-    path = DATA_DIR / filename
-    if not path.exists():
-        print(f"[benchmarks] {path} not found — run download_datasets.py first")
-        return []
-    return json.loads(path.read_text())
-
-
 _LOCOMO_CATEGORY_NAMES: dict[int, str] = {
     1: "single_hop",
     2: "temporal",
@@ -207,13 +188,13 @@ def _load_locomo(limit: int | None = None) -> list[dict]:
     """Load LoCoMo (Snap Research, xjtuleeyf/Locomo-Plus's locomo10.json) —
     ten long multi-session conversations, 1,986 QA pairs total across 5
     categories (single_hop, temporal, open_domain, multi_hop, adversarial).
-    Deterministically samples 1,000 of the 1,986 (fixed seed), per spec.
-    `limit` truncates further, for quick sanity-check runs (e.g. n=10)."""
+    Deterministically samples 1,000 of the 1,986 (fixed seed). `limit`
+    truncates further, for quick sanity-check runs (e.g. n=10)."""
     path10 = DATA_DIR / "locomoplus_locomo10.json"
     if not path10.exists():
         path10 = DATA_DIR / "locomoplus_sample.json"
     if not path10.exists():
-        print(f"[benchmarks] {path10} not found — run download_datasets.py first")
+        print(f"[benchmarks] {path10} not found")
         return []
 
     raw10 = json.loads(path10.read_text())
@@ -261,12 +242,11 @@ def _load_locomoplus(limit: int | None = None) -> list[dict]:
     cue-trigger instances. A cue appears early in a conversation and a
     trigger arrives much later with low semantic overlap; the model is
     asked what connection the earlier exchange has to the current one (see
-    _score_locomoplus — the original judge_score/constraint_consistency/
-    rouge_l/exact_match scoring, restored as-is). All 401 are used — it is
-    the whole benchmark, no sampling."""
+    _score_locomoplus). All 401 are used — it is the whole benchmark, no
+    sampling."""
     path_plus = DATA_DIR / "locomoplus_plus.json"
     if not path_plus.exists():
-        print(f"[benchmarks] {path_plus} not found — run download_datasets.py first")
+        print(f"[benchmarks] {path_plus} not found")
         return []
 
     raw_plus = json.loads(path_plus.read_text())
@@ -313,10 +293,6 @@ def _load_casehold() -> list[dict]:
         try:
             from datasets import load_dataset as hf_load
             print("[benchmarks] Loading coastalcph/lex_glue[case_hold] from HuggingFace…")
-            # Sliced to 1,000, matching download_datasets.py's download_casehold()
-            # limit and this dataset's cached-file sample count — the fallback
-            # path previously had no slice at all, which would have loaded the
-            # full ~53,000-item test split instead of the intended sample size.
             ds = hf_load("coastalcph/lex_glue", "case_hold", split="test[:1000]")
             items = [dict(ex) for ex in ds]
         except Exception as exc:
@@ -352,17 +328,11 @@ def _load_cuad() -> list[dict]:
 
     try:
         from datasets import load_dataset as hf_load
-        # Bug fix: this used to say "theatticusproject/cuad" here and in the
-        # print below, but theatticusproject/cuad only hosts raw PDFs — the
-        # line actually fetches chenghao/cuad_qa (the pre-processed
-        # SQuAD-format version), matching download_datasets.py's downloader
-        # and this dataset's real HuggingFace id per SYSTEM_EXPLANATION.txt.
+        # theatricusproject/cuad only hosts raw PDFs; chenghao/cuad_qa has
+        # the pre-processed SQuAD-format version this loader expects.
         print("[benchmarks] Loading chenghao/cuad_qa from HuggingFace…")
         ds = hf_load("chenghao/cuad_qa", split="test")
         samples: list[dict] = []
-        # Aligned with download_datasets.py's download_cuad() limit (1,000)
-        # so the HF-fallback path and the cached-file path produce the same
-        # sample count.
         for ex in list(ds)[:1000]:
             answers = ex.get("answers", {})
             answer_texts = answers.get("text", []) if isinstance(answers, dict) else []
@@ -415,12 +385,6 @@ def _load_contractnli(limit: int | None = None) -> list[dict]:
                                       TEXT, so _score_contractnli can present
                                       a numbered list to the model and
                                       resolve its answer back to span text.
-                                      (This field is a practical addition on
-                                      top of the 4 fields the spec calls out
-                                      as strictly required — without it there
-                                      would be no way to show the model an
-                                      actual candidate-span list to choose
-                                      evidence from.)
     """
     path = DATA_DIR / "contractnli.json"
     if not path.exists():
@@ -480,11 +444,9 @@ def _load_timeqa(limit: int | None = None) -> list[dict]:
             "context":  s.get("context", ""),
             "answer":   s.get("answer", ""),
             "split":    s.get("split", "easy"),
-            # These two extra keys ride along purely so the generic
-            # _sample_notes() helper (which already whitelists "task" and
-            # "temporal_scope") tags every TimeQA result row without needing
-            # any TimeQA-specific code in _sample_notes itself — per spec,
-            # results must be "reported separately for Easy and Hard".
+            # These two extra keys ride along so the generic _sample_notes()
+            # helper tags every TimeQA row with its split, letting Easy/Hard
+            # be reported separately without any TimeQA-specific code there.
             "task":            "timeqa",
             "temporal_scope":  s.get("split", "easy"),
             "_benchmark":      "timeqa",
@@ -555,12 +517,8 @@ def _dense_only_retrieve(
 # for the closed-book datasets (contractnli, timeqa, cuad), which fold their
 # own gold context directly into the prompt (see their _score_* functions)
 # rather than depending on whatever the shared retrieval step happens to
-# surface. CUAD used to have a dedicated "eval_docs" open-book entry here
-# (ingest_cuad_docs.py builds that collection); CUAD is now closed-book, per
-# the finalised benchmark spec — the excerpt is given directly, matching
-# ContractNLI's and TimeQA's existing closed-book protocol. ingest_cuad_docs.py
-# and the eval_docs collection are left in place, unused, rather than deleted
-# — no other dataset needs them, but nothing about keeping them is wrong.
+# surface. ingest_cuad_docs.py builds a separate "eval_docs" collection for
+# an open-book CUAD variant that isn't used by the standard scoring path.
 DATASET_COLLECTIONS: dict[str, tuple[str, ...]] = {}
 
 
@@ -627,20 +585,12 @@ def _generate(config: str, question: str, dataset_name: str | None = None) -> tu
 # Per-benchmark scoring
 # ---------------------------------------------------------------------------
 
-# NOTE: the old private `_chunk_recall` helper that used to live here has
-# been relocated to metrics.py as the public `retrieval_recall` function (one
-# of the current 13 standard metrics, imported at the top of this file) — see
-# that function's docstring for the one deliberate behaviour change (empty
-# gold-span list now scores 0.0, not the old 1.0). Every call site below that
-# used to call `_chunk_recall` now calls `retrieval_recall` instead.
-
 
 def _score_locomo(config: str, sample: dict) -> dict[str, float]:
     """Score LoCoMo (factual memory, RQ2): judge_score via category-specific
     LLM-judge prompts (single_hop/multi_hop/temporal/open_domain/adversarial
-    — the dataset's own protocol), plus rouge_l as the universal
-    supplementary lexical-overlap check (spec 7c: "used by all" benchmarks).
-    """
+    — the dataset's own protocol), plus rouge_l as a supplementary
+    lexical-overlap check."""
     question      = sample.get("question", "")
     reference     = sample.get("reference", "")
     category_name = sample.get("category_name", "single_hop")
@@ -737,25 +687,19 @@ def _score_casehold(config: str, sample: dict) -> dict[str, float]:
 def _score_cuad(config: str, sample: dict) -> dict[str, float]:
     """Score CUAD closed-book span extraction: the model is given the
     contract excerpt (up to 2,000 chars) directly alongside the clause-type
-    question and must produce the exact span — the finalised benchmark spec
-    frames this the same way as ContractNLI/TimeQA (gold context folded
-    directly into the prompt), not as open-book retrieval. There is
-    therefore no retrieval_recall metric here — CUAD's retrieval_recall
-    reporting (and the dedicated eval_docs open-book corpus built by
-    ingest_cuad_docs.py) has been retired along with the open-book design;
-    ContractNLI is the sole retrieval_recall-scored dataset now.
+    question and must produce the exact span, the same closed-book protocol
+    as ContractNLI/TimeQA.
 
     AUPR and precision_at_recall (r=0.8, r=0.9) are DATASET-LEVEL AGGREGATES
     (see metrics.py) — AUPR is CUAD's own headline metric (Hendrycks et al.,
     2021), computed once after the whole CUAD run finishes, not here. Since
     CUAD is generative span extraction rather than classification, there is
-    no native model confidence score to rank predictions by; as a defensible
-    synthetic proxy (the spec does not pin one down for a generative task),
-    each sample's own continuous best_tf1 (token-F1 against the best-matching
-    gold answer) is used as the confidence/ranking signal — a higher partial
-    token overlap is treated as "the model was more confident it had the
-    right span" — while the strict binary best_em (exact_match) is used as
-    ground truth for "was this actually correct". This mirrors the standard
+    no native model confidence score to rank predictions by; each sample's
+    own continuous best_tf1 (token-F1 against the best-matching gold answer)
+    is used as the confidence/ranking signal — a higher partial token
+    overlap is treated as "the model was more confident it had the right
+    span" — while the strict binary best_em (exact_match) is used as ground
+    truth for "was this actually correct". This mirrors the standard
     AUPR/precision-recall pattern of ranking by a continuous score and
     checking against a stricter binary correctness criterion. This function
     only contributes that (confidence, is_correct) pair via the
@@ -814,11 +758,8 @@ def _parse_contractnli_span_numbers(answer: str) -> set[int]:
 def _score_contractnli(config: str, sample: dict) -> dict[str, float]:
     """Score ContractNLI: 3-way NLI label classification + evidence-span
     identification, mirroring the original paper's own evaluation protocol
-    (Koreeda & Manning, 2021 — see SYSTEM_EXPLANATION.txt section 7b). The
-    document and hypothesis are given directly to the model (closed-book
-    classification, per spec), unlike CUAD's deliberately-withheld-context
-    design — see the comment above DATASET_COLLECTIONS for what that implies
-    for this dataset's retrieval_recall number.
+    (Koreeda & Manning, 2021). The document and hypothesis are given
+    directly to the model (closed-book classification).
 
     Per-sample metrics: accuracy, micro_f1 (evidence spans), rouge_l,
     retrieval_recall. precision_at_recall (r=0.8) is a DATASET-LEVEL
@@ -878,19 +819,16 @@ def _score_contractnli(config: str, sample: dict) -> dict[str, float]:
 # TimeQA scoring
 # ---------------------------------------------------------------------------
 
-# Local, regex-only date/year extraction — deliberately NOT importing from
-# backend/temporal/parser.py (out of scope to touch for this migration, and
-# that module uses an LLM-based extraction call rather than a regex, which
-# would be overkill and slow for scoring/perturbing thousands of eval
-# samples). Prefers full ISO-8601 dates if present; falls back to bare
-# 4-digit years, since TimeQA answers/context more often reference a bare
-# year (e.g. "2004") than a full calendar date.
+# Local, regex-only date/year extraction — backend/temporal/parser.py uses
+# an LLM call for this, which would be overkill and slow for scoring/
+# perturbing thousands of eval samples. Prefers full ISO-8601 dates if
+# present; falls back to bare 4-digit years, since TimeQA answers/context
+# more often reference a bare year (e.g. "2004") than a full calendar date.
 _ISO_DATE_RE = re.compile(r'\b\d{4}-\d{2}-\d{2}\b')
 _YEAR_RE = re.compile(r'\b(1[0-9]{3}|20[0-9]{2})\b')
 
-# Fixed year-shift used to build TimeQA's perturbed question (spec: "shifted
-# by a few years" — no exact offset is pinned down, so +5 was chosen as a
-# clearly-different-but-still-plausible shift).
+# Fixed year-shift used to build TimeQA's perturbed question — a clearly
+# different but still plausible shift.
 _TIMEQA_YEAR_SHIFT = 5
 
 
@@ -905,9 +843,7 @@ def _extract_dates(text: str) -> list[str]:
 
 def _perturb_timeqa_year(question: str, offset: int = _TIMEQA_YEAR_SHIFT) -> str | None:
     """Shift the first 4-digit year found in `question` by `offset` years and
-    return the rewritten question, or None if no year pattern is found (per
-    spec: skip perturbation_consistency entirely for that sample rather than
-    fabricating a perturbation)."""
+    return the rewritten question, or None if no year pattern is found."""
     m = _YEAR_RE.search(question)
     if not m:
         return None
@@ -930,7 +866,7 @@ def _score_timeqa(config: str, sample: dict) -> dict[str, float]:
     perturbation_consistency requires a SECOND full generation call per
     sample (the perturbed-question answer) whenever a year is found in the
     question — TimeQA is therefore ~2x the per-sample generation cost of a
-    single-call dataset; that is expected, not a bug.
+    single-call dataset.
     """
     question  = sample.get("question", "")
     context   = sample.get("context", "")
@@ -958,7 +894,7 @@ def _score_timeqa(config: str, sample: dict) -> dict[str, float]:
         perturbed_answer, _ = _generate(config, perturbed_augmented_q, dataset_name="timeqa")
         scores["perturbation_consistency"] = perturbation_consistency(answer, perturbed_answer)
     # else: no year detected in the question — perturbation_consistency is
-    # omitted for this sample entirely (per spec), rather than faked.
+    # omitted for this sample entirely.
 
     return scores
 
@@ -1064,9 +1000,7 @@ def run_benchmark(
                 print(f"[benchmarks] Stop requested for {run_key} — halting after {i} samples.")
                 stopped = True
                 break
-            # LoCoMo-Plus samples have no "question" field (see _load_locomoplus) —
-            # fall back to trigger_query so the progress line isn't blank for them.
-            question = sample.get("question") or sample.get("trigger_query", "")
+            question = sample.get("question", "")
             print(f"  [{i+1}/{len(samples)}] {question[:70]}…")
             try:
                 scores = _score_sample(config, sample, dataset_name)
@@ -1092,10 +1026,9 @@ def run_benchmark(
 
         # --- Post-loop dataset-level aggregates for this config ---
         # Computed from whatever was collected even if the run was stopped
-        # early: "Partial results are still persisted" (spec 7d) — a
-        # macro_f1/AUPR over the samples actually completed before a stop
-        # request is more informative than silently dropping the aggregate
-        # entirely just because the run didn't reach the last sample.
+        # early — a macro_f1/AUPR over the samples actually completed is more
+        # informative than dropping the aggregate just because the run
+        # didn't reach the last sample.
         if dataset_name == "casehold" and casehold_pairs:
             gold_labels = [p[0] for p in casehold_pairs]
             pred_labels = [p[1] for p in casehold_pairs]
@@ -1114,9 +1047,8 @@ def run_benchmark(
                                    precision_at_recall(confidence_correct, 0.8)))
 
         if stopped:
-            # Stop was requested for the whole run, not just this config —
-            # preserves the pre-existing behaviour of halting immediately
-            # across every remaining config, not just the current one.
+            # A stop request halts every remaining config in this run, not
+            # just the current one.
             break
 
     return rows
@@ -1190,10 +1122,7 @@ async def import_to_postgres(rows: list[dict], run_id: str | None = None) -> Non
 # Entry point
 # ---------------------------------------------------------------------------
 
-# The complete, finalised dataset set — see module docstring. "locomo" and
-# "locomoplus" are the two halves of what an earlier design merged into one
-# "locomoplus" benchmark; the earlier 7-dataset suite has been removed
-# entirely (not this pair — they're a deliberate split, not a retirement).
+# The full dataset set — see module docstring for details on each.
 ALL_DATASETS = ["contractnli", "timeqa", "locomo", "locomoplus", "casehold", "cuad"]
 
 

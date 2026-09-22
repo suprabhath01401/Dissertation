@@ -1,21 +1,17 @@
 """Evaluation metrics for the legal RAG system.
 
-Current 13 metrics (SYSTEM_EXPLANATION.txt section 7c), used across the 6
-standard datasets (contractnli, timeqa, locomo, locomoplus, casehold, cuad —
-locomo and locomoplus are the two halves of what an earlier design merged
-into one "locomoplus" benchmark; see benchmarks.py's module docstring):
+13 metrics, used across the 6 benchmark datasets (contractnli, timeqa,
+locomo, locomoplus, casehold, cuad — see benchmarks.py's module docstring):
   rouge_l, accuracy, macro_f1, micro_f1, exact_match, token_f1, AUPR,
   precision_at_recall, judge_score, constraint_consistency,
   temporal_consistency, perturbation_consistency, retrieval_recall.
 
-`judge_score` is implemented below as `locomoplus_judge` (the function name
-predates a later split of "locomoplus" into "locomo" (categories 1-5:
-single_hop, multi_hop, temporal, open_domain, adversarial — via
-benchmarks.py's _score_locomo) and "locomoplus" (category 6: cognitive,
-via _score_locomoplus) — both are still scored by this same judge function,
-just with different category prompts). The metric key actually written to
-evaluation_results is the string "judge_score", not the
-function name.
+`judge_score` is implemented below as `locomoplus_judge`, used by both
+"locomo" (categories 1-5: single_hop, multi_hop, temporal, open_domain,
+adversarial — via benchmarks.py's _score_locomo) and "locomoplus" (category
+6: cognitive, via _score_locomoplus), each with its own category prompt.
+The metric key written to evaluation_results is the string "judge_score",
+not the function name.
 
 IMPORTANT — two of the thirteen are DATASET-LEVEL AGGREGATES, not per-sample
 metrics: `macro_f1` and `AUPR`/`precision_at_recall`. Each must be called
@@ -28,17 +24,12 @@ ordinary per-sample metric, computed independently for each sample the same
 way rouge_l always has been. See each aggregate function's own docstring
 below for exactly what to collect and when to call it.
 
-Retired metrics (implementation retained here, no longer part of standard
-reporting per SYSTEM_EXPLANATION.txt section 7c "RETIRED METRICS" — all
-three were anchored only to LexRAG's now-dropped legacy pipeline):
-  keyword_accuracy, contextual_accuracy, faithfulness.
+Retired metrics (implementation retained here, not part of standard
+reporting): keyword_accuracy, contextual_accuracy, faithfulness.
 
 Also present but unused by any current dataset: recall_at_k, precision_at_k,
-mrr, ndcg_at_k — pre-existing retrieval-ranking helpers from an earlier
-design, predating even the retired LexRAG/ChronoQA/LegalBench-RAG/LexGLUE
-suite (which has been removed from this codebase entirely, not merely
-excluded from the standard run — there is no more benchmarks.py code left
-that calls these four).
+mrr, ndcg_at_k — general retrieval-ranking helpers not currently wired into
+any benchmark's scoring path.
 """
 import json
 import re
@@ -374,8 +365,7 @@ def locomoplus_judge(
 
 
 # ---------------------------------------------------------------------------
-# New metrics added for the 5-dataset / 13-metric evaluation redesign
-# (SYSTEM_EXPLANATION.txt section 7c). All are PER-SAMPLE metrics unless the
+# Classification / ranking metrics. All are PER-SAMPLE metrics unless the
 # docstring explicitly says "DATASET-LEVEL AGGREGATE".
 # ---------------------------------------------------------------------------
 
@@ -442,7 +432,7 @@ def micro_f1(pred_set: set, gold_set: set) -> float:
 
     Used by benchmarks.py's _score_contractnli to score predicted evidence
     spans against gold evidence_spans (ContractNLI's multi-label
-    evidence-identification task, SYSTEM_EXPLANATION.txt section 7b/7c).
+    evidence-identification task).
     """
     tp = len(pred_set & gold_set)
     precision = tp / len(pred_set) if pred_set else 0.0
@@ -542,22 +532,13 @@ def perturbation_consistency(original_answer: str, perturbed_answer: str) -> flo
 def retrieval_recall(gold_spans: list[str], retrieved_texts: list[str]) -> float:
     """Approximate recall: fraction of `gold_spans` whose first 5 non-trivial
     tokens (length > 2, case-insensitive) appear anywhere in the
-    concatenated `retrieved_texts`. Per-sample metric.
+    concatenated `retrieved_texts`. Per-sample metric, used by ContractNLI
+    to score retrieval against the gold evidence spans.
 
-    Relocated from benchmarks.py's private `_chunk_recall` helper (identical
-    tokenisation/matching logic — only the probe-token extraction and
-    substring check — now surfaced as a proper public metrics.py function
-    since it is one of the current 13 standard metrics, not a private
-    implementation detail). Used by CUAD (the gold answer span) and
-    ContractNLI (the gold evidence spans).
-
-    Note: unlike the old `_chunk_recall`, which returned 1.0 for an empty
-    `gold_spans` list (treated as "nothing to find, vacuously recalled"),
-    this returns 0.0 for an empty list, per the current metric's spec —
-    important for e.g. ContractNLI's "NotMentioned" samples, whose
-    evidence_spans list is legitimately empty, where a vacuous 1.0 would
-    misleadingly inflate the aggregate score rather than simply contributing
-    no signal.
+    Returns 0.0 for an empty `gold_spans` list rather than a vacuous 1.0 —
+    important for ContractNLI's "NotMentioned" samples, whose evidence_spans
+    list is legitimately empty and should contribute no signal rather than
+    inflate the aggregate score.
     """
     if not gold_spans:
         return 0.0

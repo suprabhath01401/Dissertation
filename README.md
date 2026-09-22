@@ -112,7 +112,7 @@ backend/
   routing/                  Self-router, MoE prompt generator, cluster dispatcher
   memory/                    Session store, constraint tracker, factual compressor, Obsidian writer
   temporal/                  Temporal fact extraction + logic circuits
-  evaluation/                Benchmark runner, dataset downloaders, metrics
+  evaluation/                Benchmark runner, dataset loaders, metrics
 frontend/
   src/components/           React components (chat, dashboard, evaluation, uploads)
   src/api/client.ts          Backend API client
@@ -124,22 +124,14 @@ data/eval/                   Cached benchmark datasets (JSON)
 
 ## Evaluation framework
 
-The system compares RAG configurations (`vanilla_rag`, `long_ctx_only`, `self_route_base`, `full_system`, `mixtral_cluster`, `llama_cluster`) across 7 benchmark datasets (`legalbench-rag`, `lexrag`, `chronoqa`, `locomoplus`, `casehold`, `lexglue`, `cuad`).
+The system compares 5 RAG configurations (`vanilla_rag`, `long_ctx_only`, `self_route_base`, `full_system`, `mixtral_cluster`) across 6 benchmark datasets (`contractnli`, `timeqa`, `locomo`, `locomoplus`, `casehold`, `cuad`).
 
-**Download benchmark datasets** (one-time):
-```bash
-python backend/evaluation/download_datasets.py --datasets all
-```
-
-**CUAD only** needs one extra one-time step, since it's the only benchmark evaluated open-book (the model must retrieve the right contract out of 42 rather than being handed it directly):
-```bash
-python backend/evaluation/ingest_cuad_docs.py
-```
+There is no in-app or CLI "download all" feature. `contractnli.json` and `timeqa.json` have no automated fetcher — see `backend/evaluation/benchmarks.py`'s `_load_contractnli`/`_load_timeqa` docstrings for their sources and expected schema, and place the files at `data/eval/contractnli.json` / `data/eval/timeqa.json`. `locomo`/`locomoplus` (from `xjtuleeyf/Locomo-Plus` on GitHub) and `casehold`/`cuad` (from HuggingFace) are already cached under `data/eval/`.
 
 **Run an evaluation:**
 ```bash
 # CLI
-python backend/evaluation/benchmarks.py --dataset legalbench-rag --config full_system
+python backend/evaluation/benchmarks.py --dataset contractnli --config full_system
 
 # Or via the UI: Evaluation tab -> select dataset/config -> Run Evaluation
 ```
@@ -148,7 +140,7 @@ Results are saved to Postgres (`evaluation_results` — per-sample rows, `evalua
 
 ### Cluster inference (Warwick GPU cluster)
 
-`mixtral_cluster` and `llama_cluster` dispatch generation to the Warwick GPU cluster (kudu-taught) over SSH via Slurm, instead of running locally. Requires:
+`mixtral_cluster` dispatches generation to the Warwick GPU cluster (kudu-taught) over SSH via Slurm, instead of running locally. Requires:
 
 1. SSH access configured (`warwick-cluster` alias, via a `warwick-remote` jump host — see `backend/config.py`'s `cluster_*` settings and `~/.ssh/config`)
 2. The project synced to the cluster:
@@ -156,10 +148,9 @@ Results are saved to Postgres (`evaluation_results` — per-sample rows, `evalua
    rsync -az --exclude=.env --exclude=data/ --exclude=__pycache__ --exclude=.git --exclude=.venv \
      ./ warwick-cluster:/dcs/pg25/u5754610/Desktop/test/legal_rag/
    ```
-3. For `mixtral_cluster`: Mixtral weights pre-downloaded on the cluster (`sbatch jobs/download_mixtral.sbatch`)
-4. For `llama_cluster`: Ollama installed on the cluster in user space, and the model pre-pulled (`sbatch jobs/warmup_llama_ollama.sbatch`) — see `jobs/llama_ollama_inference.sbatch` for details
+3. Mixtral weights pre-downloaded on the cluster (`sbatch jobs/download_mixtral.sbatch`)
 
-If cluster dispatch fails or times out, both configs fall back to local generation automatically.
+If cluster dispatch fails or times out, `mixtral_cluster` falls back to local generation automatically.
 
 ## Troubleshooting
 

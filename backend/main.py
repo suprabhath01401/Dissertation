@@ -167,7 +167,7 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks):
             # 4. Retrieve from both collections (hybrid RRF) — computed now since
             # has_app_docs/sources feed routing and generation, but the SSE
             # "source" events themselves aren't sent to the client until after
-            # the "route" event, matching the spec's event ordering.
+            # the "route" event.
             sources = retrieve(req.message)
             has_app_docs = any(s.get("source_type") == "app_docs" for s in sources)
 
@@ -223,12 +223,9 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks):
             background_tasks.add_task(
                 extract_and_save_constraints, session_id, req.message, req.user_id
             )
-            # History compression — ctx.turn_count was read before this turn's
+            # History compression: ctx.turn_count was read before this turn's
             # messages were saved, and every turn saves exactly 2 rows (user +
-            # assistant), so the post-save count is ctx.turn_count + 2, not +1.
-            # (+1 is always odd, since ctx.turn_count is always even, so
-            # `turn_count % 10 == 0` could never fire — compression silently
-            # never ran.)
+            # assistant), so the post-save count is ctx.turn_count + 2.
             background_tasks.add_task(maybe_compress, session_id, ctx.turn_count + 2)
             # Obsidian note
             background_tasks.add_task(
@@ -480,11 +477,8 @@ async def delete_document(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
 _eval_running: dict[str, bool] = {}  # "{dataset}:{config}" → is running
 
-# The finalised dataset set — the earlier 7-dataset suite
-# (legalbench-rag/lexrag/chronoqa/lexglue) has been removed from the
-# codebase entirely, so those names are no longer accepted here. "locomo"
-# and "locomoplus" are two separate benchmarks (factual vs. cognitive
-# memory), not one merged dataset — see benchmarks.py's module docstring.
+# "locomo" and "locomoplus" are two separate benchmarks (factual vs.
+# cognitive memory) — see benchmarks.py's module docstring.
 VALID_EVAL_DATASETS = {"contractnli", "timeqa", "locomo", "locomoplus", "casehold", "cuad", "all"}
 VALID_EVAL_CONFIGS = {
     "vanilla_rag", "long_ctx_only", "self_route_base",
@@ -569,9 +563,7 @@ async def eval_status():
     """Report which benchmark runs are currently in progress.
 
     There is no dataset-download endpoint — data/eval/*.json is populated
-    manually (see backend/evaluation/download_datasets.py and the
-    _load_contractnli/_load_timeqa docstrings in benchmarks.py), not via
-    an in-app feature.
+    manually; see benchmarks.py's dataset loader docstrings for sources.
     """
     return {"running": [k for k, v in _eval_running.items() if v]}
 
